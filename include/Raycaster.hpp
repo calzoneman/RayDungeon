@@ -5,6 +5,7 @@
 
 class Raycaster {
     public:
+        Raycaster();
         Level *level;
         double posX, posY;
         double dirX, dirY;

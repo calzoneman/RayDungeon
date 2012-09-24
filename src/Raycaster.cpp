@@ -1,5 +1,7 @@
 #include "Raycaster.hpp"
 
+#include <cmath>
+
 Raycaster::Raycaster() {
     this->level = NULL;
     this->posX = 0.0;
@@ -10,7 +12,8 @@ Raycaster::Raycaster() {
     this->planeY = 0.0;
 }
 
-void cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
+void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
+    int offY = 0;
     unsigned w = screen->w;
     unsigned h = screen->h;
 
@@ -44,7 +47,7 @@ void cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
     }
     else {
         stepY = +1;
-        sideDistY = (mapY + 1.0 - rayPosY) * deltaY;
+        sideDistY = (mapY + 1.0 - posY) * deltaY;
     }
 
     while(!hit && mapX > 0 && mapX < level->width() && mapY >= 0 && mapY < level->height()) {
@@ -59,14 +62,14 @@ void cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
             side = 1;
         }
 
-        if(level(mapX, mapY, Level::Wall) > 0) hit = true;
+        if(level->get(mapX, mapY, Level::Wall) > 0) hit = true;
     }
 
     if(side == 0) {
         perpWallDist = fabs((mapX - posX + (1 - stepX) / 2) / rDirX);
     }
     else {
-        perpWalLDist = fabs((mapY - posY + (1 - stepY) / 2) / rDirY);
+        perpWallDist = fabs((mapY - posY + (1 - stepY) / 2) / rDirY);
     }
 
     unsigned height = abs(h / perpWallDist);
@@ -79,13 +82,14 @@ void cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
 
     // TODO Get texture
     unsigned texW = 8;
+    unsigned texH = 8;
 
     double wallX = 0;
     if(side == 1) {
-        wallX = posX + ((mapY - posY + (1 - stepY) / 2) / rayDirY) * rayDirX;
+        wallX = posX + ((mapY - posY + (1 - stepY) / 2) / rDirY) * rDirX;
     }
     else {
-        wallX = posY + ((mapX - posX + (1 - stepX) / 2) / rayDirX) * rayDirY;
+        wallX = posY + ((mapX - posX + (1 - stepX) / 2) / rDirX) * rDirY;
     }
 
     wallX -= floor(wallX);
@@ -107,7 +111,7 @@ void cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
             if(side == 1) {
                 color = (color >> 1) & 0x7f7f7f;
             }
-            SDL_Rect pixel = {column * scale, (y + offY) * scale, scale, scale};
+            SDL_Rect pixel = {(i16) (column * scale), (i16)((y + offY) * scale), (u16)scale, (u16)scale};
             SDL_FillRect(screen, &pixel, color);
         }
     }

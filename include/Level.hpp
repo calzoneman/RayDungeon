@@ -4,11 +4,14 @@
 
 class Level {
     private:
-        unsigned width, height;
+        unsigned _width, _height;
         u16 *data;
     public:
         Level(unsigned width, unsigned height);
         Level();
+
+        unsigned width() const;
+        unsigned height() const;
 
         enum Layer {
             Floor = 0,
