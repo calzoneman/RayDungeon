@@ -1,3 +1,5 @@
+#include "Level.hpp"
+
 #include "SDL/SDL.h"
 #include <iostream>
 #include <cstdlib>
@@ -13,6 +15,9 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     SDL_WM_SetCaption("RayDungeon", 0);
+
+    Level level(16, 16);
+    std::cout << level(10, 10, Level::Wall) << std::endl;
     while(true) {
         SDL_Event event;
         while(SDL_PollEvent(&event)) {
