@@ -1,6 +1,7 @@
 #include "Raycaster.hpp"
 
 #include <cmath>
+#include <iostream>
 
 Raycaster::Raycaster() {
     this->level = NULL;
@@ -12,10 +13,23 @@ Raycaster::Raycaster() {
     this->planeY = 0.0;
 }
 
+void Raycaster::cast(SDL_Surface *screen, unsigned scale) {
+    if(SDL_MUSTLOCK(screen)) {
+        if(!SDL_LockSurface(screen)) {
+            return;
+        }
+    }
+    for(unsigned x = 0; x < screen->w / scale; x++) {
+        this->cast_ray(screen, scale, x);
+    }
+    if(SDL_MUSTLOCK(screen)) {
+        SDL_UnlockSurface(screen);
+    }
+}
+
 void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
-    int offY = 0;
-    unsigned w = screen->w;
-    unsigned h = screen->h;
+    unsigned w = screen->w / scale;
+    unsigned h = screen->h / scale;
 
     double camX = 2 * column / (double)w - 1;
     double rDirX = dirX + planeX * camX;
@@ -50,7 +64,7 @@ void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
         sideDistY = (mapY + 1.0 - posY) * deltaY;
     }
 
-    while(!hit && mapX > 0 && mapX < level->width() && mapY >= 0 && mapY < level->height()) {
+    while(!hit && mapX >= 0 && mapX < level->width() && mapY >= 0 && mapY < level->height()) {
         if(sideDistX < sideDistY) {
             sideDistX += deltaX;
             mapX += stepX;
@@ -98,25 +112,18 @@ void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
     if(side == 0 && rDirX > 0) texX = texW - texX - 1;
     else if(side == 1 && rDirY < 0) texX = texW - texX - 1;
 
-    if(end + offY >= 0 && start + offY < h) {
-        for(unsigned y = start; y <= end; y++) {
-            if(y + offY < 0)
-                continue;
-            if(y + offY >= h)
-                break;
-            unsigned d = y * 256 - h * 128 + height * 128;
-            unsigned texY = ((d * texH) / height) / 256;
-            // TODO get color from texture
-            unsigned color = 0xFF000000;
-            if(side == 1) {
-                color = (color >> 1) & 0x7f7f7f;
-            }
-            SDL_Rect pixel = {(i16) (column * scale), (i16)((y + offY) * scale), (u16)scale, (u16)scale};
-            SDL_FillRect(screen, &pixel, color);
-        }
+    for(unsigned y = start; y < end; y++) {
+        unsigned d = y * 256 - h * 128 + height * 128;
+        unsigned texY = ((d * texH) / height) / 256;
+        unsigned color = 0xFFFF0000;
+        if(side == 1)
+            color &= 0xFF7F7F7F;
+
+        SDL_Rect pixel = {(i16) (column * scale), (i16)(y * scale), (u16)scale, (u16)scale};
+        SDL_FillRect(screen, &pixel, color);
     }
 
-    zbuffer[column] = perpWallDist;
+    // zbuffer[column] = perpWallDist;
 
     // Cast floor and ceiling
     double fXWall = 0.0, fYWall = 0.0;
@@ -142,18 +149,10 @@ void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
     double currentDist = 0.0;
 
     // TODO Load textures
-    unsigned ftexW = 0, ftexH = 0;
-    unsigned ctexW = 0, ctexH = 0;
+    unsigned ftexW = 8, ftexH = 8;
+    unsigned ctexW = 8, ctexH = 8;
 
-    for(unsigned y = end + 1; y - abs(offY) < h + 1; y++) {
-        // What the fuck?
-        // I have no idea what these 2 lines mean but it's for vertical rotation
-        bool yc = y + offY >= h || y + offY < 0;
-        bool hyc = h - y + offY >= h || h - y + offY < 0;
-
-        if(yc && hyc)
-            continue;
-
+    for(unsigned y = end; y < h + 1; y++) {
         currentDist = h / (2.0 * y - h);
         double weight = currentDist / distWall;
         double curX = weight * fXWall + (1.0 - weight) * posX;
@@ -170,14 +169,19 @@ void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
 
         // TODO calculate fog
 
-        if(y + offY >= 0 && y + offY < h) {
-            SDL_Rect pixel = {(i16) (column * scale), (i16)((y + offY) * scale), (u16)scale, (u16)scale};
-            SDL_FillRect(screen, &pixel, fCol);
-        }
-        if(h - y + offY >= 0 && h - y + offY < h) {
-            SDL_Rect pixel = {(i16) (column * scale), (i16)((h - y + offY) * scale), (u16)scale, (u16)scale};
-            SDL_FillRect(screen, &pixel, cCol);
-        }
+        SDL_Rect pixel = {(i16) (column * scale), (i16)(y * scale), (u16)scale, (u16)scale};
+        SDL_FillRect(screen, &pixel, fCol);
+        pixel = {(i16) (column * scale), (i16)((h - y) * scale), (u16)scale, (u16)scale};
+        SDL_FillRect(screen, &pixel, cCol);
     }
+}
 
+void Raycaster::dir(double ang) {
+    dirX = -cos(-ang);
+    dirY = -sin(-ang);
+}
+
+void Raycaster::plane(double ang) {
+    planeX = -0.66 * sin(-ang);
+    planeY = 0.66 * cos(-ang);
 }

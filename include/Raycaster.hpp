@@ -14,6 +14,7 @@ class Raycaster {
         void cast(SDL_Surface *screen, unsigned scale);
         void cast_ray(SDL_Surface *screen, unsigned scale, unsigned column);
         void plane(double ang);
+        void dir(double ang);
 };
 
 #define RAYCASTER_HPP_INCLUDED
