@@ -1,4 +1,6 @@
 #include "Raycaster.hpp"
+#include "ARGBSurface.hpp"
+#include "Assets.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -94,9 +96,9 @@ void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
     if(start < 0) start = 0;
     if(end >= h) end = h - 1;
 
-    // TODO Get texture
-    unsigned texW = 8;
-    unsigned texH = 8;
+    ARGBSurface tex = Assets::wall(level->get(mapX, mapY, Level::Wall));
+    unsigned texW = tex.surf->w;
+    unsigned texH = tex.surf->h;
 
     double wallX = 0;
     if(side == 1) {
@@ -108,16 +110,16 @@ void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
 
     wallX -= floor(wallX);
 
-    unsigned texX = (unsigned) (wallX * texW);
+    int texX = (int) (wallX * texW);
     if(side == 0 && rDirX > 0) texX = texW - texX - 1;
     else if(side == 1 && rDirY < 0) texX = texW - texX - 1;
 
     for(unsigned y = start; y < end; y++) {
         unsigned d = y * 256 - h * 128 + height * 128;
-        unsigned texY = ((d * texH) / height) / 256;
-        unsigned color = 0xFFFF0000;
+        int texY = ((d * texH) / height) / 256;
+        u32 color = tex.get(texX, texY);
         if(side == 1)
-            color &= 0xFF7F7F7F;
+            color = (color >> 1) & 0xff7f7f7f;
 
         SDL_Rect pixel = {(i16) (column * scale), (i16)(y * scale), (u16)scale, (u16)scale};
         SDL_FillRect(screen, &pixel, color);
@@ -148,9 +150,11 @@ void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
     double distWall = perpWallDist;
     double currentDist = 0.0;
 
-    // TODO Load textures
-    unsigned ftexW = 8, ftexH = 8;
-    unsigned ctexW = 8, ctexH = 8;
+    // TODO Allow for different ceiling/floor types
+    ARGBSurface ceil = Assets::ceiling(0);
+    ARGBSurface floor = Assets::floor(0);
+    unsigned ftexW = floor.surf->w, ftexH = floor.surf->h;
+    unsigned ctexW = ceil.surf->w, ctexH = ceil.surf->h;
 
     for(unsigned y = end; y < h + 1; y++) {
         currentDist = h / (2.0 * y - h);
@@ -158,21 +162,21 @@ void Raycaster::cast_ray(SDL_Surface *screen, unsigned scale, unsigned column) {
         double curX = weight * fXWall + (1.0 - weight) * posX;
         double curY = weight * fYWall + (1.0 - weight) * posY;
 
-        unsigned fTexX = (unsigned) (curX * ftexW) % ftexW;
-        unsigned fTexY = (unsigned) (curY * ftexH) % ftexH;
-        unsigned cTexX = (unsigned) (curX * ctexW) % ctexW;
-        unsigned cTexY = (unsigned) (curY * ctexH) % ctexH;
+        int fTexX = (int) (curX * ftexW) % ftexW;
+        // Floor texture should be flipped since we're drawing it upside down
+        int fTexY = ftexH - ((int) (curY * ftexH) % ftexH);
+        int cTexX = (int) (curX * ctexW) % ctexW;
+        int cTexY = (int) (curY * ctexH) % ctexH;
 
-        // TODO Load from textures
-        unsigned fCol = 0xFF00FF00;
-        unsigned cCol = 0xFF00FFFF;
+        u32 fCol = floor.get(fTexX, fTexY);
+        u32 cCol = ceil.get(cTexX, cTexY);
 
         // TODO calculate fog
 
-        SDL_Rect pixel = {(i16) (column * scale), (i16)(y * scale), (u16)scale, (u16)scale};
-        SDL_FillRect(screen, &pixel, fCol);
-        pixel = {(i16) (column * scale), (i16)((h - y) * scale), (u16)scale, (u16)scale};
-        SDL_FillRect(screen, &pixel, cCol);
+        SDL_Rect fpixel = {(i16) (column * scale), (i16)(y * scale), (u16)scale, (u16)scale};
+        SDL_FillRect(screen, &fpixel, fCol);
+        SDL_Rect cpixel = {(i16) (column * scale), (i16)((h - y) * scale), (u16)scale, (u16)scale};
+        SDL_FillRect(screen, &cpixel, cCol);
     }
 }
 
