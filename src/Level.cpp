@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <iostream>
 
 #include "Level.hpp"
 #include "IntDefs.hpp"
@@ -14,10 +15,17 @@ Level::Level(unsigned width, unsigned height) {
     this->_height = height;
     this->data = new u16[width * height * 2];
     for(unsigned i = 0; i < width * height * 2; i++) {
-        if(i/width == 0 || i%width == 0 || i/width == height || i%width == height-1)
+        if(i/width == 0 || i%width == 0 || i/width == height-1 || i%width == height-1)
             this->data[i] = 1;
         else
             this->data[i] = 0;
+    }
+
+    for(unsigned y = 0; y < height; y++) {
+        for(unsigned x = 0; x < width; x++) {
+            std::cout << this->data[y * width + x];
+        }
+        std::cout << std::endl;
     }
 }
 
